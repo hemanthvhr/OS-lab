@@ -1,0 +1,29 @@
+extern int copy_pc2myfs(char* source,char* dest)
+{
+	int temp = searchinodewithfilename(dest);
+	if(temp!=-1)
+	{
+		printf("file with name %s already exists\n",dest);
+		return -1;
+	}
+	FILE *fp;
+	if(fp  = fopen(source,"rb"))
+	{
+		int filesize;
+		fseek(fp, 0L, SEEK_END);
+		filesize = ftell(fp);
+		fseek(fp, 0L, SEEK_SET);
+		if(update_myfs(filesize,dest,fp)==-1)
+		{
+			fclose(fp);
+			return -1;
+		}
+	}
+	else
+	{
+		printf("No file with %s name exists\n",source);
+		return -1;
+	}
+	fclose(fp);
+	return 0;
+}

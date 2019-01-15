@@ -1,0 +1,77 @@
+extern int copy_myfs2pc(char* source,char* dest)
+{
+	char buff[257];
+	buff[256]=0;
+	FILE* fp;
+	fp = fopen(dest,"rb");
+	if(fp!=NULL)
+	{
+		printf("File with name %s already exists in pc\n",dest);
+		fclose(fp);
+		return -1;
+	}
+	fp = fopen(dest,"w");
+	if(fp==NULL)
+		return -1;
+	int currfileinode = searchinodewithfilename(source);
+	if(currfileinode==-1)
+		return -1;
+	inodelist[currfileinode]->lastaccessed = time(NULL);
+	int rem_size = inodelist[currfileinode]->file_size;
+	int i=0;
+	while(rem_size > 0)
+	{
+		bzero(buff,256);
+		memcpy(buff,inodelist[currfileinode]->data_pntrs[i],256);
+		if(rem_size<256)
+			fwrite(buff,rem_size,1,fp);
+		else
+			fwrite(buff,256,1,fp);
+		//printf("%s",buff);
+		i++;
+		rem_size-=256;
+		if(i==8)
+			break;
+	}
+	i=0;
+	while(rem_size > 0)
+	{
+		int datablock = *(inodelist[currfileinode]->indirect_pntr + i);
+		bzero(buff,256);
+		memcpy(buff,data+datablock*256,256);
+		if(rem_size<256)
+			fwrite(buff,rem_size,1,fp);
+		else
+			fwrite(buff,256,1,fp);
+		//printf("%s",buff);
+		i++;
+		rem_size-=256;
+		if(i==64)
+			break;
+	}
+	int j=0;
+	while(rem_size > 0)
+	{
+		int indirectblock = *(inodelist[currfileinode]->dbl_ind_pntr + j);
+		int i=0;
+		while(rem_size > 0)
+		{
+			int datablock = *(data+indirectblock*256+i);
+			bzero(buff,256);
+			memcpy(buff,data+datablock*256,256);
+			if(rem_size<256)
+				fwrite(buff,rem_size,1,fp);
+			else
+				fwrite(buff,256,1,fp);
+			//printf("%s",buff);
+			i++;
+			rem_size-=256;
+			if(i==64)
+				break;
+		}
+		j++;
+	}
+	fprintf(fp,"\0");
+	fclose(fp);
+	return 0;
+}

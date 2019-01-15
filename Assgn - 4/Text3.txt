@@ -1,0 +1,14 @@
+extern int getandsetfreeinode(unsigned int A[])
+{
+	for(int i=0;i<myfs_inodes;i++)
+	{
+		if(testbit(A,i)==0)
+		{
+			setbit(A,i);
+			super_block->inodes_used++;
+			memset(inodelist[i],0,sizeof(inode_struct));
+			return i;
+		}
+	}
+	return -1;
+}

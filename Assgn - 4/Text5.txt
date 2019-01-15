@@ -1,0 +1,147 @@
+int update_myfs(int filesize,char* dest,FILE* fp)
+{
+	int currfileinode = getandsetfreeinode(super_block->inode_bitmap);
+	if(currfileinode == -1)
+		return -1;
+	inodelist[current_directory]->lastaccessed = time(NULL);
+	inodelist[current_directory]->lastmodified = time(NULL);
+	int j=0,k=0;
+	while(inodelist[current_directory]->data_pntrs[j]!=NULL)
+	{
+		char z[30];
+		memcpy(z,inodelist[current_directory]->data_pntrs[j]+32*k,30);
+		if(strcmp(z,"")==0)
+			break;
+		else
+		{
+			k++;
+			if(k==8)
+			{
+				k=0;
+				j++;
+			}
+		}
+		if(j==8)
+			break;
+	}
+	if(j!=8)
+	{
+		if(inodelist[current_directory]->data_pntrs[j]==NULL)
+		{
+			int freedblock = getandsetfreeblock(super_block->db_bitmap);
+			if(freedblock==-1)
+				return -1;
+			inodelist[current_directory]->data_pntrs[j] = (char *)(data+freedblock*256);
+			memset(inodelist[current_directory]->data_pntrs[j],0,256);
+			memcpy(inodelist[current_directory]->data_pntrs[j],dest,strlen(dest)+1);
+			//printf("%d\n",inodelist[current_directory]->data_pntrs[j]);
+			short int *num = (short int *)(inodelist[current_directory]->data_pntrs[j]+30);
+			*num = currfileinode;
+		}
+		else
+		{
+			//printf("%d\n",inodelist[current_directory]->data_pntrs[j]+k*32);
+			//printf("%s\n",dest);
+			memcpy(inodelist[current_directory]->data_pntrs[j]+k*32,dest,strlen(dest)+1);
+			short int *num = (short int *)(inodelist[current_directory]->data_pntrs[j]+k*32+30);
+			*num = currfileinode;
+		}
+	}
+	else
+	{
+		//implement indirect and double indirect pointers
+	}
+	
+	inodelist[current_directory]->file_size += 32;
+	//implement recursive addition of file size for all parent directories
+
+	//char buff[257];
+	//buff[256]=0;
+	inodelist[currfileinode]->file_type=false;
+	inodelist[currfileinode]->file_size=filesize;
+	inodelist[currfileinode]->lastmodified = time(NULL);
+	inodelist[currfileinode]->lastaccessed = time(NULL);
+	inodelist[currfileinode]->parent_inode_no = current_directory;
+	int rem_size = filesize;
+	int i=0;
+	while(rem_size > 0)
+	{
+		int freedblock = getandsetfreeblock(super_block->db_bitmap);
+		if(freedblock==-1)
+			return -1;
+		inodelist[currfileinode]->data_pntrs[i] = (char *)(data+freedblock*256);
+		fread(inodelist[currfileinode]->data_pntrs[i],256,1,fp);
+		//bzero(buff,256);
+		//memcpy(buff,data+freedblock*256,256);
+		//printf("%s",buff);
+		i++;
+		rem_size-=256;
+		if(i==8)
+			break;
+	}
+	if(rem_size > 0)
+	{
+		int indirectpointer = getandsetfreeblock(super_block->db_bitmap);
+		if(indirectpointer==-1)
+			return -1;
+		inodelist[currfileinode]->indirect_pntr = (int *)(data+indirectpointer*256);
+	}
+	i=0;
+	while(rem_size > 0)
+	{
+		int freedblock = getandsetfreeblock(super_block->db_bitmap);
+		if(freedblock==-1)
+			return -1;
+		unsigned int *x = (unsigned int *)(inodelist[currfileinode]->indirect_pntr + i);
+		*x = freedblock;
+		fread(data+freedblock*256,256,1,fp);
+		//bzero(buff,256);
+		//memcpy(buff,data+freedblock*256,256);
+		//printf("%s",buff);
+		i++;
+		rem_size-=256;
+		if(i==64)
+			break;
+	}
+	if(rem_size > 0)
+	{
+		int doubleindptr = getandsetfreeblock(super_block->db_bitmap);
+		if(doubleindptr==-1)
+			return -1;
+		inodelist[currfileinode]->dbl_ind_pntr = (int *)(data+doubleindptr*256);
+	}
+	j=0;
+	while(rem_size > 0)
+	{
+		if(rem_size > 0)
+		{
+			int indirectpointer = getandsetfreeblock(super_block->db_bitmap);
+			if(indirectpointer==-1)
+				return -1;
+			inodelist[currfileinode]->indirect_pntr = (int *)(data+indirectpointer*256);
+			unsigned int *x = (unsigned int *)(inodelist[currfileinode]->dbl_ind_pntr + j);
+			*x = indirectpointer;
+		}
+		int i=0;
+		while(rem_size > 0)
+		{
+			int freedblock = getandsetfreeblock(super_block->db_bitmap);
+			if(freedblock==-1)
+				return -1;
+			unsigned int *x = (unsigned int *)(inodelist[currfileinode]->indirect_pntr + i);
+			*x = freedblock;
+		
+			fread(data+freedblock*256,256,1,fp);
+			i++;
+			rem_size-=256;
+			if(i==64)
+				break;
+		}
+		j++;
+		if(j==64)
+			break;
+	}
+	super_block->inodes_used++;
+	super_block->dblocks_used += filesize/256;
+	return 0;
+}

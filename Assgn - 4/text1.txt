@@ -1,0 +1,48 @@
+#ifndef MY_HEADER_H
+#define MY_HEADER_H
+
+#include <time.h>
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <iostream>
+
+#define myfs_inodes 96
+#define block_size 256
+#define setbit(A,k)     ( A[(k/32)] |= (1 << (k%32)) )
+#define clearbit(A,k)   ( A[(k/32)] &= ~(1 << (k%32)) )
+#define testbit(A,k)    (( A[(k/32)] & (1 << (k%32)) ) >> k%32)
+
+using namespace std;
+
+struct super_block_struct
+{
+	unsigned int total_size;
+	unsigned int max_no_of_inodes;
+	unsigned int inodes_used=0;
+	unsigned int max_no_dblocks;
+	unsigned int dblocks_used=0;
+	unsigned int* inode_bitmap;
+	unsigned int* db_bitmap;
+};
+
+struct inode_struct
+{
+	bool file_type;
+	unsigned int file_size=0;
+	time_t lastmodified;
+	time_t lastaccessed;
+	unsigned int parent_inode_no;
+	bool access_perm[9];
+	char* data_pntrs[8]={NULL};
+	int* indirect_pntr=NULL;
+	int* dbl_ind_pntr=NULL;
+};
+
+
+char *pointer;
+super_block_struct *super_block;
+inode_struct* inodelist[myfs_inodes];
+char* data;
+int current_dire

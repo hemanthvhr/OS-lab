@@ -1,0 +1,63 @@
+extern int rm_myfs(char* filename)
+{
+	int file_inode;
+	if((file_inode = srch_del_myfs(filename))==-1)
+		return -1;
+	else
+	{
+		//clearbit corresponding to the following inode
+		//clearbits corresponding to the datablocks
+		//update super block inodes_used--;  dblocks_used-=(filesize)/256;
+		
+		//update parent inode - done in srch_del_myfs() function
+		
+		//clean all the datablocks occupied by removed file
+		//clean all the info in inodelist[file_inode]
+		
+		int temp=0;
+		int i=0;
+		while(temp<inodelist[file_inode]->file_size)
+		{
+			clearbit(super_block->db_bitmap,((char*)inodelist[file_inode]->data_pntrs[i]-data)/256);
+			temp+=256;
+			i++;
+			if(i==8)
+				break;
+		}
+		if((i==8)&&(temp<inodelist[file_inode]->file_size))
+		{
+			i=0;
+			while(*(inodelist[file_inode]->indirect_pntr+i)!=0)
+			{
+				clearbit(super_block->db_bitmap,*(inodelist[file_inode]->indirect_pntr+i));
+				temp+=256;
+				i++;
+				if(i==64)
+					break;
+			}
+			clearbit(super_block->db_bitmap,((char*)inodelist[file_inode]->indirect_pntr-data)/256);
+		}
+		if((i==64)&&(temp<inodelist[file_inode]->file_size))
+		{
+			i=0;
+			while(temp<inodelist[file_inode]->file_size)
+			{
+				int ind_block = *(inodelist[file_inode]->dbl_ind_pntr+i);
+				int j=0;
+				while(temp < inodelist[file_inode]->file_size)
+				{
+					clearbit(super_block->db_bitmap,*(data+ind_block*256+j));
+					temp+=256;
+					j++;
+					if(j==64)
+						break;
+				}
+				i++;
+				if(i==64)
+					break;
+			}
+		}
+	}
+	clearbit(super_block->inode_bitmap,file_inode);
+	return 0;	
+}

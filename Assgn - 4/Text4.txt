@@ -1,0 +1,14 @@
+extern int getandsetfreeblock(unsigned int A[])
+{
+	for(int i=0;i<super_block->max_no_dblocks;i++)
+	{
+		if(testbit(A,i)==0)
+		{
+			setbit(A,i);
+			super_block->dblocks_used++;
+			memset(data+i*256,0,256);
+			return i;
+		}
+	}
+	return -1;
+}

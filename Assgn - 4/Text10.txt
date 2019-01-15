@@ -1,0 +1,37 @@
+int srch_del_myfs(char* filename)
+{
+	int temp=0;
+	int i=0,j=0;
+	while(temp<inodelist[current_directory]->file_size)
+	{
+		char tempfile[30];
+		memcpy(tempfile,inodelist[current_directory]->data_pntrs[i]+32*j,30);
+		tempfile[strlen(tempfile)]='\0';
+		int inode=*(inodelist[current_directory]->data_pntrs[i]+32*j+30);
+		if(!strcmp(filename,tempfile))
+		{
+			inodelist[current_directory]->file_size -= 32;
+			inodelist[current_directory]->lastmodified = time(NULL);
+			inodelist[current_directory]->lastaccessed = time(NULL);
+			memset(inodelist[current_directory]->data_pntrs[i]+32*j,0,32);
+			/*if(j==0)
+			{
+				clearbit(super_block->db_bitmap,((char *)inodelist[current_directory]->data_pntrs[i] - data)/256);
+				inodelist[current_directory]->data_pntrs[i]=NULL;
+			}*/
+			// Implement removing of datablocks with no filenames and making datapointers null
+			
+			return inode;
+		}
+		if(strcmp(tempfile,""))
+			temp+=32;
+		j++;
+		if(j==8)
+		{
+			i++;
+			j=0;
+		}
+	}
+	// implement indirect pointer and double indirect pointer
+	return -1;	
+}

@@ -1,0 +1,40 @@
+extern int create_myfs(int myfs_size)
+{
+	if(!(pointer =(char *)malloc(myfs_size*sizeof(char))))
+		return -1;
+	int no_of_blocks = myfs_size/block_size;
+
+	//super block initialization
+	super_block = (super_block_struct *)pointer;
+	super_block->total_size=myfs_size;
+	super_block->max_no_of_inodes=myfs_inodes;
+	super_block->max_no_dblocks=(myfs_size-(sizeof(inode_struct)*myfs_inodes)-(myfs_size/(256*8)+sizeof(super_block_struct)+myfs_inodes/8+1))/256;
+	super_block->inode_bitmap = (unsigned int *)(pointer+sizeof(super_block_struct));
+	memset(super_block->inode_bitmap,0,myfs_inodes/8+1);
+	super_block->db_bitmap = (unsigned int *)(pointer+sizeof(super_block_struct)+myfs_inodes/8+1);
+	memset(super_block->db_bitmap,0,myfs_size/(256*8));
+	
+	//inode list initialization
+	for(int i=0;i<myfs_inodes;i++)
+	{
+		inodelist[i] = (inode_struct *)(pointer+sizeof(super_block_struct)+myfs_inodes/8+myfs_size/(256*8)+sizeof(inode_struct)*i);
+		memset(inodelist[i]->access_perm,true,9*sizeof(bool));
+	}
+	
+	//data initialization
+	data = (char *)inodelist[myfs_inodes-1]+sizeof(inode_struct);
+
+	//initialization of root directory
+	super_block->inodes_used = 1;
+	setbit(super_block->inode_bitmap,0);
+	current_directory = 0;
+	inodelist[0]->parent_inode_no=-1;
+	inodelist[0]->file_type = true;
+	inodelist[0]->lastmodified = time(NULL);
+	inodelist[0]->lastaccessed = time(NULL);
+	for(int i=0;i<8;i++)
+		inodelist[0]->data_pntrs[i]=NULL;
+	inodelist[0]->indirect_pntr=NULL;
+	inodelist[0]->dbl_ind_pntr=NULL;
+	return 0;
+}

@@ -1,0 +1,55 @@
+extern int showfile_myfs(char* filename)
+{
+	char buff[257];
+	buff[256]=0;
+	int currfileinode = searchinodewithfilename(filename);
+	if(currfileinode==-1)
+	{
+		printf("No file with filename %s exists\n",filename);
+		return -1;
+	}
+	inodelist[currfileinode]->lastaccessed = time(NULL);
+	int rem_size = inodelist[currfileinode]->file_size;
+	int i=0;
+	while(rem_size > 0)
+	{
+		bzero(buff,256);
+		memcpy(buff,inodelist[currfileinode]->data_pntrs[i],256);
+		printf("%s",buff);
+		i++;
+		rem_size-=256;
+		if(i==8)
+			break;
+	}
+	i=0;
+	while(rem_size > 0)
+	{
+		int datablock = *(inodelist[currfileinode]->indirect_pntr + i);
+		bzero(buff,256);
+		memcpy(buff,data+datablock*256,256);
+		printf("%s",buff);
+		i++;
+		rem_size-=256;
+		if(i==64)
+			break;
+	}
+	int j=0;
+	while(rem_size > 0)
+	{
+		int indirectblock = *(inodelist[currfileinode]->dbl_ind_pntr + j);
+		int i=0;
+		while(rem_size > 0)
+		{
+			int datablock = *(data+indirectblock*256+i);
+			bzero(buff,256);
+			memcpy(buff,data+datablock*256,256);
+			printf("%s",buff);
+			i++;
+			rem_size-=256;
+			if(i==64)
+				break;
+		}
+		j++;
+	}
+	return 0;
+}
